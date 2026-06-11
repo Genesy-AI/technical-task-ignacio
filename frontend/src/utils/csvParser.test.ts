@@ -1,5 +1,30 @@
 import { describe, it, expect } from 'vitest'
 import { parseCsv, isValidEmail } from './csvParser'
+import { isValidCountryCode } from './countryCode'
+
+describe('isValidCountryCode', () => {
+  it('should return true for valid ISO 3166-1 alpha-2 codes', () => {
+    expect(isValidCountryCode('US')).toBe(true)
+    expect(isValidCountryCode('ES')).toBe(true)
+    expect(isValidCountryCode('GB')).toBe(true)
+    expect(isValidCountryCode('FR')).toBe(true)
+    expect(isValidCountryCode('DE')).toBe(true)
+  })
+
+  it('should be case-insensitive', () => {
+    expect(isValidCountryCode('us')).toBe(true)
+    expect(isValidCountryCode('es')).toBe(true)
+    expect(isValidCountryCode('Us')).toBe(true)
+  })
+
+  it('should return false for invalid codes', () => {
+    expect(isValidCountryCode('XXX')).toBe(false)
+    expect(isValidCountryCode('12')).toBe(false)
+    expect(isValidCountryCode('ZZ')).toBe(false)
+    expect(isValidCountryCode('')).toBe(false)
+    expect(isValidCountryCode('A')).toBe(false)
+  })
+})
 
 describe('isValidEmail', () => {
   it('should return true for valid email addresses', () => {
@@ -142,6 +167,36 @@ John,Doe,john@example.com,Developer,US,Tech Corp`
     expect(result[0].jobTitle).toBe('Developer')
   })
 
+  it('should accept valid country codes and normalise to uppercase', () => {
+    const csv = `firstName,lastName,email,countryCode
+John,Doe,john@example.com,es`
+
+    const result = parseCsv(csv)
+    expect(result[0].countryCode).toBe('ES')
+    expect(result[0].isValid).toBe(true)
+  })
+
+  it('should reject invalid country codes and set to undefined', () => {
+    const csv = `firstName,lastName,email,countryCode
+John,Doe,john@example.com,XXX
+Jane,Smith,jane@example.com,12`
+
+    const result = parseCsv(csv)
+    expect(result[0].countryCode).toBeUndefined()
+    expect(result[1].countryCode).toBeUndefined()
+    expect(result[0].isValid).toBe(true)
+    expect(result[1].isValid).toBe(true)
+  })
+
+  it('should treat empty country code as undefined', () => {
+    const csv = `firstName,lastName,email,countryCode
+John,Doe,john@example.com,`
+
+    const result = parseCsv(csv)
+    expect(result[0].countryCode).toBeUndefined()
+    expect(result[0].isValid).toBe(true)
+  })
+
   it('should handle missing optional fields', () => {
     const csv = `firstName,lastName,email,jobTitle,countryCode
 John,Doe,john@example.com,,`
@@ -209,6 +264,55 @@ Jane,Johnson,jane@example.com`
     expect(result[1].errors).toContain('First name is required')
     expect(result[1].errors).toContain('Invalid email format')
     expect(result[2].isValid).toBe(true)
+  })
+
+  it('should parse new optional fields: phoneNumber, yearsInRole, linkedInUrl', () => {
+    const csv = `firstName,lastName,email,phoneNumber,yearsInRole,linkedInUrl
+John,Doe,john@example.com,+1-555-0100,5,https://linkedin.com/in/johndoe`
+
+    const result = parseCsv(csv)
+
+    expect(result).toHaveLength(1)
+    expect(result[0].phoneNumber).toBe('+1-555-0100')
+    expect(result[0].yearsInRole).toBe(5)
+    expect(result[0].linkedInUrl).toBe('https://linkedin.com/in/johndoe')
+    expect(result[0].isValid).toBe(true)
+  })
+
+  it('should parse yearsInRole as a number', () => {
+    const csv = `firstName,lastName,email,yearsInRole
+John,Doe,john@example.com,10`
+
+    const result = parseCsv(csv)
+    expect(result[0].yearsInRole).toBe(10)
+    expect(typeof result[0].yearsInRole).toBe('number')
+  })
+
+  it('should set yearsInRole to undefined for non-numeric value', () => {
+    const csv = `firstName,lastName,email,yearsInRole
+John,Doe,john@example.com,abc`
+
+    const result = parseCsv(csv)
+    expect(result[0].yearsInRole).toBeUndefined()
+    expect(result[0].isValid).toBe(true)
+  })
+
+  it('should set yearsInRole to 0 when value is "0"', () => {
+    const csv = `firstName,lastName,email,yearsInRole
+John,Doe,john@example.com,0`
+
+    const result = parseCsv(csv)
+    expect(result[0].yearsInRole).toBeUndefined()
+  })
+
+  it('should set phoneNumber and linkedInUrl to undefined when empty', () => {
+    const csv = `firstName,lastName,email,phoneNumber,linkedInUrl
+John,Doe,john@example.com,,`
+
+    const result = parseCsv(csv)
+    expect(result[0].phoneNumber).toBeUndefined()
+    expect(result[0].linkedInUrl).toBeUndefined()
+    expect(result[0].isValid).toBe(true)
   })
 
   it('should handle whitespace in fields', () => {

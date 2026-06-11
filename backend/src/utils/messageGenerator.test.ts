@@ -9,6 +9,9 @@ describe('generateMessageFromTemplate', () => {
     jobTitle: 'Software Engineer',
     companyName: 'Tech Corp',
     countryCode: 'US',
+    phoneNumber: '+1-555-0100',
+    yearsInRole: 5,
+    linkedInUrl: 'https://linkedin.com/in/johndoe',
   }
 
   const partialLead: Lead = {
@@ -181,6 +184,58 @@ describe('generateMessageFromTemplate', () => {
       const template = 'Name: {firstName}, Company: {companyName}'
       const result = generateMessageFromTemplate(template, longLead)
       expect(result).toBe(`Name: ${'A'.repeat(1000)}, Company: ${'B'.repeat(500)}`)
+    })
+  })
+
+  describe('new lead fields (phoneNumber, yearsInRole, linkedInUrl)', () => {
+    it('should replace {phoneNumber} in template', () => {
+      const result = generateMessageFromTemplate('Call me at {phoneNumber}', fullLead)
+      expect(result).toBe('Call me at +1-555-0100')
+    })
+
+    it('should replace {yearsInRole} — number converted to string', () => {
+      const result = generateMessageFromTemplate('You have {yearsInRole} years of experience', fullLead)
+      expect(result).toBe('You have 5 years of experience')
+    })
+
+    it('should replace {yearsInRole} when value is 0', () => {
+      const lead: Lead = { firstName: 'Jane', yearsInRole: 0 }
+      const result = generateMessageFromTemplate('Experience: {yearsInRole} years', lead)
+      expect(result).toBe('Experience: 0 years')
+    })
+
+    it('should replace {linkedInUrl} in template', () => {
+      const result = generateMessageFromTemplate('Connect: {linkedInUrl}', fullLead)
+      expect(result).toBe('Connect: https://linkedin.com/in/johndoe')
+    })
+
+    it('should replace all three new fields together', () => {
+      const template = 'Phone: {phoneNumber}, Years: {yearsInRole}, LinkedIn: {linkedInUrl}'
+      const result = generateMessageFromTemplate(template, fullLead)
+      expect(result).toBe(
+        'Phone: +1-555-0100, Years: 5, LinkedIn: https://linkedin.com/in/johndoe'
+      )
+    })
+
+    it('should throw when {phoneNumber} is used but field is null', () => {
+      const lead: Lead = { firstName: 'Jane', phoneNumber: null }
+      expect(() => generateMessageFromTemplate('Call {phoneNumber}', lead)).toThrow(
+        'Missing required field: phoneNumber'
+      )
+    })
+
+    it('should throw when {yearsInRole} is used but field is null', () => {
+      const lead: Lead = { firstName: 'Jane', yearsInRole: null }
+      expect(() => generateMessageFromTemplate('Exp: {yearsInRole}', lead)).toThrow(
+        'Missing required field: yearsInRole'
+      )
+    })
+
+    it('should throw when {linkedInUrl} is used but field is null', () => {
+      const lead: Lead = { firstName: 'Jane', linkedInUrl: null }
+      expect(() => generateMessageFromTemplate('Connect: {linkedInUrl}', lead)).toThrow(
+        'Missing required field: linkedInUrl'
+      )
     })
   })
 

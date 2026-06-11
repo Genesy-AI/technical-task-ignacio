@@ -93,13 +93,16 @@ export const CsvImportModal: FC<CsvImportModalProps> = ({ isOpen, onClose }) => 
     mutationFn: async (leads: CsvLead[]) => {
       const validLeads = leads.filter((lead) => lead.isValid)
 
-      const leadsToImport = validLeads.map((lead) => ({
+        const leadsToImport = validLeads.map((lead) => ({
         firstName: lead.firstName,
         lastName: lead.lastName,
         email: lead.email,
         jobTitle: lead.jobTitle || undefined,
         countryCode: lead.countryCode || undefined,
         companyName: lead.companyName || undefined,
+        phoneNumber: lead.phoneNumber || undefined,
+        yearsInRole: lead.yearsInRole ?? undefined,
+        linkedInUrl: lead.linkedInUrl || undefined,
       }))
 
       return api.leads.bulkImport({ leads: leadsToImport })
